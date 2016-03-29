@@ -23,6 +23,7 @@ def replace2(fname):
 		data = data.replace("\\", "")
 		data = data.replace("*", "")
 		data = data.replace("$", "")
+		data = data.replace(":", "")
 		outfile.write(data)
 
 def unique(fname):
