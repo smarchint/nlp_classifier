@@ -6,5 +6,5 @@ Assignment for NLP-course
 * Vishal Kartik K.
 
 #Part A :
-* average accuracy : 76.64%  
+* average accuracy : 76.07%  
 * refer "overall -> classifier.py"
