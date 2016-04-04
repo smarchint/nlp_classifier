@@ -7,4 +7,4 @@ Assignment for NLP-course
 
 #Part A :
 * average accuracy : 76.64%  
-* refer "overall -> classify.py"
+* refer "overall -> classifier.py"
