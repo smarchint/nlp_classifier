@@ -6,4 +6,5 @@ Assignment for NLP-course
 * Vishal Kartik K.
 
 #Part A :
-* average accuracy : 76.64%  (refer overall folder)
+* average accuracy : 76.64%  
+* refer "overall -> classify.py"
