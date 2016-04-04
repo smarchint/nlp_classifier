@@ -5,5 +5,5 @@ Assignment for NLP-course
 * Chintada Saikumar
 * Vishal Kartik K.
 
-#Part A
-* average accuracy : 76.64%
+#Part A :
+* average accuracy : 76.64%  (refer overall folder)
