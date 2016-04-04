@@ -220,19 +220,22 @@ def q(doc,clas):
 	res = 0
 	doc = doc.split()
 	#print doc
+	theta = tot_freq_neg
+	if clas == 0:
+		theta = tot_freq_pos
 	for word in doc:
 		if word in voc:
 			res += db[word][clas]
 		else:
-			res += math.log10(1)-math.log10(N()+voc_size+1)
+			res += math.log10(1)-math.log10(theta+voc_size+1)
 
 	return res
 
 def predict(doc):
 	if q(doc,0)>q(doc,1):
-		return 1
+		return 1 #pos
 	else:
-		return 0
+		return 0 #neg
 def clean_mess():
 	for f in ['all','net','pos','neg']:
 		os.remove(f+'_word_freq.p')
