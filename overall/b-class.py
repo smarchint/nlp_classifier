@@ -100,7 +100,7 @@ def remove(fname):
 
 def lis2dic(l):
 	counts = Counter(l)
-	counts = {i:counts[i] for i in counts if counts[i]>=2}
+	#counts = {i:counts[i] for i in counts if counts[i]>=2}
 	return counts
 
 def pickleOut(temp,fname):
@@ -122,12 +122,42 @@ def tokenize(fname):
 		ls = [i.strip('\n') for i in ls if i!='']
 		l += ls
 	return l
-def freq():
-	pfl =tokenize('train_'+plus)
+
+def get_bigrams(fname):
+	infile = open(fname,'r')
+	bi_grams=[]
+	for line in infile.readlines():
+		ls = line.split()
+		ls = [i.strip('\n') for i in ls if i != '']
+		bi=[]
+		if ls[0]:
+			bi=[('*',ls[0])]
+		n = len(ls)
+		for i in range(n-1):
+			bi.append((ls[i],ls[i+1]))
+		if ls:
+			bi.append((ls[n-1],'**'))
+		bi_grams += bi		
+	return bi_grams
+def str_to_bigrams(doc):
+	ls = doc.split()
+	ls = [i.strip('\n') for i in ls if i != '']
+	bi_grams=[]
+	if ls:
+		bi_grams=[('*',ls[0])]
+	n = len(ls)
+	for i in range(n-1):
+		bi_grams.append((ls[i],ls[i+1]))
+	if ls:
+		bi_grams.append((ls[n-1],'**'))
+	return bi_grams
+def gen_frequencies():
+	pfl =get_bigrams('train_'+plus)
 	temp = lis2dic(pfl)
+	print temp
 	pickleOut(temp,'pos_word_freq')
 
-	nfl = tokenize('train_'+minus)
+	nfl = get_bigrams('train_'+minus)
 	temp = lis2dic(nfl)
 	pickleOut(temp,'neg_word_freq')
 	
@@ -170,7 +200,7 @@ def total(db1):
 	for word in db1:
 		c += db1[word]
 	return c
-def p(word,flag):
+def p(bigram,flag):
 	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
 	db1 = neg
 	tot = tot_freq_neg
@@ -178,28 +208,28 @@ def p(word,flag):
 		db1 = pos
 		tot = tot_freq_pos
 	#tot = total(db1)
-	if word in db1:
-		return math.log(db1[word])-math.log(tot+voc_size)
+	if bigram in db1:
+		return math.log(db1[bigram])-math.log(tot+voc_size)
 	else: 
 		return math.log(1)-math.log(tot+voc_size)
 def  create_model():
 	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
 	db = {}
-	for word in voc:
-		db[word]=[p(word,0),p(word,1)]
+	for bigram in voc:
+		db[bigram]=[p(bigram,0),p(bigram,1)]
 	pickleOut(db,'MNBmodel')
 #optimize here
 def q(doc,clas):
 	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
 	#global db
 	res = 0
-	doc = doc.split()
+	doc = str_to_bigrams(doc)
 	theta = tot_freq_neg
 	if clas == 1:
 		theta = tot_freq_pos
-	for word in doc:
-		if word in voc:
-			res += db[word][clas]
+	for bigram in doc:
+		if bigram in voc:
+			res += db[bigram][clas]
 		else:
 			res += math.log(1)-math.log(theta+voc_size)
 	return res
@@ -218,7 +248,7 @@ def clean_mess():
 def crossvalidate():
 	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
 	sum_acc =0
-	for i in range(1,11):
+	for i in range(1,2):
 		pos,neg,voc,db={},{},{},{}
 		tot_freq_pos=0
 		tot_freq_neg=0
@@ -248,7 +278,7 @@ def crossvalidate():
 		# if len(ls) == 1:print ls
 		
 		#freq print of train set
-		freq()
+		gen_frequencies()
 
 
 		pos = pickleIn('pos_word_freq')
@@ -260,7 +290,7 @@ def crossvalidate():
 		#counts in freq print of tain set
 		pre_patch()
 		ls =  pickleIn('net_word_freq')
-		voc_size = ls[0]
+		voc_size = ls[0]+2
 		tot_freq_neg = ls[1]
 		tot_freq_pos = ls[2]
 		print ls
