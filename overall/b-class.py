@@ -10,7 +10,7 @@ import re
 plus = 'pos.txt'
 minus = 'neg.txt'
 
-pos,neg,voc,db={},{},{},{}
+pos,neg,pos_w,neg_w,voc,db,all_bigrams={},{},{},{},{},{},{}
 tot_freq_pos=0
 tot_freq_neg=0
 voc_size=0
@@ -120,6 +120,7 @@ def tokenize(fname):
 	for line in infile.readlines():
 		ls = line.split()
 		ls = [i.strip('\n') for i in ls if i!='']
+		ls += ['*','**']
 		l += ls
 	return l
 
@@ -152,18 +153,35 @@ def str_to_bigrams(doc):
 		bi_grams.append((ls[n-1],'**'))
 	return bi_grams
 def gen_frequencies():
-	pfl =get_bigrams('train_'+plus)
-	temp = lis2dic(pfl)
-	print temp
+	
+	pbfl =get_bigrams('train_'+plus)
+	temp = lis2dic(pbfl)
+	pickleOut(temp,'pos_bigram_freq')
+	
+	pf = tokenize('train_'+plus)
+	temp = lis2dic(pf)
+	temp = {i:temp[i] for i in temp if temp[i]>=2}
 	pickleOut(temp,'pos_word_freq')
 
-	nfl = get_bigrams('train_'+minus)
-	temp = lis2dic(nfl)
-	pickleOut(temp,'neg_word_freq')
-	
-	temp = lis2dic(pfl+nfl)
-	pickleOut(temp,'all_word_freq')
 
+	nbfl = get_bigrams('train_'+minus)
+	temp = lis2dic(nbfl)
+	pickleOut(temp,'neg_bigram_freq')
+	
+	nf = tokenize('train_'+minus)
+	temp = lis2dic(nf)
+	temp = {i:temp[i] for i in temp if temp[i]>=2}
+	pickleOut(temp,'neg_word_freq')
+
+
+	temp = lis2dic(pbfl+nbfl)
+	#print temp
+	pickleOut(temp,'all_bigram_freq')
+
+	temp = lis2dic(pf+nf)
+	temp = {i:temp[i] for i in temp if temp[i]>=2}
+	#print temp
+	pickleOut(temp,'all_word_freq')
 def cleanData():
 	for doc in [plus,minus]:
 		replace(doc)
@@ -188,10 +206,10 @@ def pickleIn(fname):
 	pickle_in.close()
 	return db1
 def pre_patch():
-	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
-	voc_size = len(voc)
-	tot_freq_pos = total(pos)
-	tot_freq_neg = total(neg)
+	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size,pos_w,neg_w
+	voc_size = len(voc)+2
+	tot_freq_pos = total(pos_w)
+	tot_freq_neg = total(neg_w)
 	ls = [voc_size,tot_freq_neg,tot_freq_pos]
 	pickleOut(ls,'net_word_freq')
 def total(db1):
@@ -201,34 +219,40 @@ def total(db1):
 		c += db1[word]
 	return c
 def p(bigram,flag):
-	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
+	global pos,pos_w,neg_w,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size,all_bigrams
 	db1 = neg
-	tot = tot_freq_neg
+	db2 = neg_w
 	if flag==1:
 		db1 = pos
-		tot = tot_freq_pos
-	#tot = total(db1)
+		db2 = pos_w
+	tot = len(db1)
 	if bigram in db1:
-		return math.log(db1[bigram])-math.log(tot+voc_size)
+		if bigram[0] in db2:
+			return math.log(db1[bigram]+1)-math.log(db2[bigram[0]]+voc_size)
+		else:
+			return math.log(db1[bigram]+1)-math.log(1+voc_size)
 	else: 
 		return math.log(1)-math.log(tot+voc_size)
+
 def  create_model():
-	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
+	global pos,pos_w,neg_w,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size,all_bigrams
 	db = {}
-	for bigram in voc:
+	for bigram in all_bigrams:
 		db[bigram]=[p(bigram,0),p(bigram,1)]
+	destroy('MNBmodel.p')
 	pickleOut(db,'MNBmodel')
+
 #optimize here
 def q(doc,clas):
-	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
+	global pos,pos_w,neg_w,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
 	#global db
 	res = 0
 	doc = str_to_bigrams(doc)
-	theta = tot_freq_neg
+	theta = len(neg)
 	if clas == 1:
-		theta = tot_freq_pos
+		theta = len(pos)
 	for bigram in doc:
-		if bigram in voc:
+		if bigram in all_bigrams:
 			res += db[bigram][clas]
 		else:
 			res += math.log(1)-math.log(theta+voc_size)
@@ -240,16 +264,18 @@ def predict(doc):
 	else:
 		return 0 #neg
 def clean_mess():
-	for f in ['all','net','pos','neg']:
+	for f in ['all','pos','neg']:
+		os.remove(f+'_bigram_freq.p')
+	for f in ['all','pos','neg']:
 		os.remove(f+'_word_freq.p')
-
-	for f in ['train_pos.txt','train_neg.txt','MNBmodel.p']:
+	rem_files = ['train_pos.txt','train_neg.txt','MNBmodel.p']
+	for f in rem_files:
 		os.remove(f)
 def crossvalidate():
-	global pos,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size
+	global pos,pos_w,neg_w,neg,voc,db,tot_freq_pos,tot_freq_neg,voc_size,all_bigrams
 	sum_acc =0
-	for i in range(1,2):
-		pos,neg,voc,db={},{},{},{}
+	for i in range(1,11):
+		pos,neg,voc,db,all_bigrams={},{},{},{},{}
 		tot_freq_pos=0
 		tot_freq_neg=0
 		voc_size=0
@@ -281,25 +307,33 @@ def crossvalidate():
 		gen_frequencies()
 
 
-		pos = pickleIn('pos_word_freq')
-		neg = pickleIn('neg_word_freq')
+		pos = pickleIn('pos_bigram_freq')
+		neg = pickleIn('neg_bigram_freq')
+		all_bigrams = pickleIn('all_bigram_freq')
+
+		pos_w = pickleIn('pos_word_freq')
+		neg_w = pickleIn('neg_word_freq')
 		voc = pickleIn('all_word_freq')
+		
 
-		#err()
+		# err()
 
-		#counts in freq print of tain set
+		# counts in freq print of tain set
 		pre_patch()
+
+
+
 		ls =  pickleIn('net_word_freq')
-		voc_size = ls[0]+2
-		tot_freq_neg = ls[1]
-		tot_freq_pos = ls[2]
+		voc_size,tot_freq_neg,tot_freq_pos = ls[0],ls[1],ls[2]
 		print ls
 
 
 		create_model()
 		
+
+
 		db = pickleIn('MNBmodel')
-		#print db
+
 		fp,fn,tp,tn = 0,0,0,0
 		#acuracy,recall,precision
 		tes = open(str(i)+plus,'r').read().split('\n')
