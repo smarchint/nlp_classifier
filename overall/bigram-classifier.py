@@ -47,7 +47,7 @@ def replace(fname):
 	data = data.replace(",", "")
 	#
 	data = data.replace("\n ", "\n")
-	data = data.replace(".", " ")
+	data = data.replace(".", " * ")
 	data = data.replace("!", " ")
 	data = data.replace("/", " ")
 	data = data.replace("-", " ")
@@ -62,7 +62,7 @@ def replace(fname):
 	data = data.replace(":", " ")
 	data = data.replace(" s ", " ")
 	#
-	data = data.replace("\ns ", "")
+	#data = data.replace("\ns ", "")
 
 
 	s='0123456789'
@@ -93,9 +93,9 @@ def remove(fname):
 	outfile.write(data)
 	outfile.close()
 
-def lis2dic(l):
+def lis2dic(l,param = 2):
 	counts = Counter(l)
-	counts = {i:counts[i] for i in counts if counts[i]>=2}
+	counts = {i:counts[i] for i in counts if counts[i]>=param}
 	return counts
 
 def tokenize(fname):
@@ -144,22 +144,20 @@ def  truncate(fl):
 
 def gen_frequencies():
 	pbfl =get_bigrams('train_'+plus)
-	pbf = lis2dic(pbfl)
+	pbf = lis2dic(pbfl,1)
 
 	nbfl = get_bigrams('train_'+minus)
-	nbf = lis2dic(nbfl)
+	nbf = lis2dic(nbfl,1)
 
-	bf = lis2dic(pbfl+nbfl)
+	bf = lis2dic(pbfl+nbfl,1)
 	
 	pwfl =  tokenize('train_'+plus)
-	pwf  =  lis2dic(pwfl)
+	pwf  =  lis2dic(pwfl,3)
 
 	nwfl =  tokenize('train_'+minus)
-	nwf  =  lis2dic(nwfl)
+	nwf  =  lis2dic(nwfl,3)
 
-	wf = lis2dic(pwfl+nwfl)
-
-	print len(pwf),len(nwf),len(wf)
+	wf = lis2dic(pwfl+nwfl,3)
 	
 	return pbf,nbf,bf,pwf,nwf,wf
 
@@ -215,9 +213,9 @@ def p(bigram,flag):
 		temp = math.log(1)-math.log(tot_freq+voc_size)
 		t1,t2=temp,temp
 		if bigram[0] in db2:
-			t1 = math.log10(db2[bigram[0]]+1)- math.log10(tot_freq + voc_size)
+			t1 = math.log(db2[bigram[0]]+1) - math.log(tot_freq + voc_size)
 		if bigram[1] in db2:
-			t1 =  math.log10(db2[bigram[1]]+1)- math.log10(tot_freq + voc_size)
+			t1 = math.log(db2[bigram[1]]+1) - math.log(tot_freq + voc_size)
 		return t1+t2
 
 def  create_model():
@@ -229,7 +227,9 @@ def  create_model():
 	return db
 
 #optimize here
+new,old=0,0
 def q(doc,clas):
+	global new,old
 	global pbf,nbf,bf,pwf,nwf,wf,db
 	global tot_freq_pos,tot_freq_neg,voc_size,b_voc_size
 	res = 0
@@ -242,13 +242,17 @@ def q(doc,clas):
 	for bigram in doc:
 		if bigram in bf:
 			res += db[bigram][clas]
+			old += 1
 		else:
+			new += 1
 			temp = math.log(1)-math.log(tot_freq+voc_size)
 			t1,t2=temp,temp
 			if bigram[0] in db2:
-				t1 = (db2[bigram[0]]+1)/(tot_freq + voc_size)
+				t1 = math.log(db2[bigram[0]]+1) - math.log(tot_freq + voc_size)
+			# else: new += 1
 			if bigram[1] in db2:
-				t1 = (db2[bigram[1]]+1)/(tot_freq + voc_size)
+				t1 = math.log(db2[bigram[1]]+1) - math.log(tot_freq + voc_size)
+			# else: new += 1
 			res += t1+t2
 	return res
 
@@ -269,15 +273,14 @@ def clean_mess():
 def crossvalidate():
 	global pbf,nbf,bf,pwf,nwf,wf,db
 	global tot_freq_pos,tot_freq_neg,voc_size,b_voc_size
-	# global fame
+	global old,new
 	sum_acc =0
 	#for each test case i
 	for i in range(1,11):
 		#initialization for each test case
 		pos,neg,voc,db,all_bigrams={},{},{},{},{}
-		tot_freq_pos=0
-		tot_freq_neg=0
-		voc_size=0
+		tot_freq_pos,tot_freq_neg,voc_size,b_voc_size=0,0,0,0
+		new,old=0,0
 		traindat1,traindat2 = '',''
 		#----------------------------------
 
@@ -312,6 +315,7 @@ def crossvalidate():
 		
 
 			#assertion code-------------------------
+
 		# temp = [bi[0] for bi in nbf]
 		# temp += [bi[1] for bi in nbf]
 		# temp  = set(temp)
@@ -348,7 +352,9 @@ def crossvalidate():
 		voc_size = len(wf)
 		tot_freq_pos = get_total_freq(pwf)
 		tot_freq_neg = get_total_freq(nwf)
-		
+
+		error()
+
 		db = create_model()
 
 		# prediction phase----------------------
@@ -372,9 +378,10 @@ def crossvalidate():
 
 		print 'fp,fn,tp,tn ',fp,fn,tp,tn 
 		accuracy = (tp+tn)/float(tp+tn+fn+fp)
-		print 'accuracy',accuracy
+		print str(i)+')','accuracy',accuracy
 		sum_acc  +=  accuracy
 		clean_mess()
+		print 'old - new',old,new
 	print sum_acc
 	avg_acc = sum_acc/10.0
 	print avg_acc
