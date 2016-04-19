@@ -100,7 +100,7 @@ def remove(fname):
 
 def lis2dic(l):
 	counts = Counter(l)
-	counts = {i:counts[i] for i in counts if counts[i]>=2}
+	counts = {i:counts[i] for i in counts if counts[i]>2}
 	return counts
 
 def pickleOut(temp,fname):

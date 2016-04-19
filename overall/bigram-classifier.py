@@ -62,7 +62,7 @@ def replace(fname):
 	data = data.replace(":", " ")
 	data = data.replace(" s ", " ")
 	#
-	#data = data.replace("\ns ", "")
+	data = data.replace("\ns ", "")
 
 
 	s='0123456789'
@@ -382,6 +382,7 @@ def crossvalidate():
 		sum_acc  +=  accuracy
 		clean_mess()
 		print 'old - new',old,new
+		print'\n'
 	print sum_acc
 	avg_acc = sum_acc/10.0
 	print avg_acc
