@@ -12,7 +12,7 @@ $ python classifier.py
 * refer "overall/b-class.py"
 ```sh
 $ cd overall
-$ python b-class.py
+$ python bigram-classifier.py
 ```
 ###Team Members
 * Atul Golcha
